@@ -1,84 +1,84 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { MdCloud, MdDashboard, MdStorage, MdMonitor, MdLogout } from 'react-icons/md';
-import { FaDocker } from 'react-icons/fa';
-import { SiKubernetes } from 'react-icons/si';
+import { MdDashboard, MdMonitor, MdStorage, MdLogout } from 'react-icons/md';
+import { FaDocker, FaRocket } from 'react-icons/fa';
 
 const Sidebar = () => {
-  const { user, logout } = useAuth();
+  const { user, logout } = useNavigate ? useAuth() : { user: null, logout: () => {} };
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
+  const handleLogout = () => { logout(); navigate('/'); };
 
   const navItems = [
-    { path: '/dashboard', icon: <MdDashboard size={20} />, label: 'Dashboard' },
-    { path: '/containers', icon: <FaDocker size={20} />, label: 'Containers' },
-    { path: '/server', icon: <MdMonitor size={20} />, label: 'Server Health' },
-    { path: '/system', icon: <MdStorage size={20} />, label: 'System Info' },
+    { path: '/dashboard', icon: <MdDashboard size={18} />, label: 'Dashboard' },
+    { path: '/containers', icon: <FaDocker size={18} />, label: 'Containers' },
+    { path: '/server', icon: <MdMonitor size={18} />, label: 'Server Health' },
+    { path: '/system', icon: <MdStorage size={18} />, label: 'System Info' },
   ];
 
   return (
-    <div className="w-64 min-h-screen bg-[#0d1224] border-r border-gray-800 flex flex-col">
+    <div className="glass-sidebar w-60 min-h-screen flex flex-col relative z-10">
       {/* Logo */}
-      <div className="p-6 border-b border-gray-800">
+      <div className="p-6 mb-2">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/30">
-            <MdCloud className="text-[#00ff88] text-2xl" />
+          <div className="p-2.5 rounded-xl glass glow-purple">
+            <FaRocket className="text-purple-400 text-lg animate-float" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Dev<span className="text-[#00ff88]">Pilot</span></h1>
-            <p className="text-xs text-gray-500">DevOps Platform</p>
+            <h1 className="text-lg font-bold grad-text">DevPilot</h1>
+            <p className="text-xs text-gray-600">Cloud Platform</p>
           </div>
         </div>
       </div>
 
-      {/* Nav Items */}
-      <nav className="flex-1 p-4 space-y-1">
+      {/* Nav */}
+      <nav className="flex-1 px-3 space-y-1">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+              `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
                 isActive
-                  ? 'bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/30'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  ? 'nav-active text-purple-300'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
               }`
             }
           >
             {item.icon}
-            <span className="font-medium">{item.label}</span>
+            <span className="text-sm font-medium">{item.label}</span>
           </NavLink>
         ))}
       </nav>
 
-      {/* Tech Stack Badge */}
-      <div className="p-4 mx-4 mb-4 rounded-xl bg-[#0a0e1a] border border-gray-800">
-        <p className="text-xs text-gray-500 mb-2">Tech Stack</p>
-        <div className="flex flex-wrap gap-1">
-          {['Docker', 'K8s', 'AWS', 'CI/CD'].map((tech) => (
-            <span key={tech} className="text-xs px-2 py-1 rounded-md bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/20">
-              {tech}
-            </span>
-          ))}
+      {/* Tech badges */}
+      <div className="px-3 mb-4">
+        <div className="glass rounded-xl p-4">
+          <p className="text-xs text-gray-600 mb-3 uppercase tracking-wider">Stack</p>
+          <div className="flex flex-wrap gap-1.5">
+            {['Docker', 'K8s', 'AWS', 'CI/CD'].map(t => (
+              <span key={t} className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                {t}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* User */}
-      <div className="p-4 border-t border-gray-800">
+      <div className="p-4 border-t border-white/5">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-white font-medium text-sm">{user?.username}</p>
-            <p className="text-xs text-[#00ff88]">{user?.role}</p>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center text-xs font-bold">
+              {user?.username?.[0]?.toUpperCase()}
+            </div>
+            <div>
+              <p className="text-white text-sm font-medium">{user?.username}</p>
+              <p className="text-xs text-purple-400">{user?.role}</p>
+            </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all"
-          >
-            <MdLogout size={18} />
+          <button onClick={handleLogout} className="p-2 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-400/10 transition-all">
+            <MdLogout size={16} />
           </button>
         </div>
       </div>

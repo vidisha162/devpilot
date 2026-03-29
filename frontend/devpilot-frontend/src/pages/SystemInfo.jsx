@@ -1,19 +1,7 @@
 import { useState, useEffect } from 'react';
 import API from '../utils/api';
 import { MdStorage, MdRefresh } from 'react-icons/md';
-import { FaServer, FaMemory, FaMicrochip, FaCode } from 'react-icons/fa';
-
-const InfoCard = ({ icon, label, value, color }) => (
-  <div className="card-glow rounded-xl p-5 flex items-center gap-4">
-    <div className="p-3 rounded-xl" style={{ background: `${color}15`, border: `1px solid ${color}30` }}>
-      <div style={{ color }}>{icon}</div>
-    </div>
-    <div>
-      <p className="text-gray-400 text-sm">{label}</p>
-      <p className="text-white font-bold mt-1">{value}</p>
-    </div>
-  </div>
-);
+import { FaServer, FaMemory, FaMicrochip, FaCode, FaLinux } from 'react-icons/fa';
 
 const SystemInfo = () => {
   const [info, setInfo] = useState(null);
@@ -23,99 +11,66 @@ const SystemInfo = () => {
     try {
       const { data } = await API.get('/server/info');
       setInfo(data);
-    } catch (error) {
-      console.error('Error fetching system info:', error);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchInfo();
-  }, []);
+  useEffect(() => { fetchInfo(); }, []);
 
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-[#00ff88]/20 border-t-[#00ff88] rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  const cards = info ? [
+    { icon: <FaServer />, label: 'Hostname', value: info.hostname, color: '#a855f7' },
+    { icon: <FaLinux />, label: 'Platform', value: info.platform, sub: `Arch: ${info.arch}`, color: '#06b6d4' },
+    { icon: <FaCode />, label: 'Node.js', value: info.nodeVersion, color: '#ec4899' },
+    { icon: <FaMicrochip />, label: 'CPU Cores', value: `${info.cpuCount} Cores`, color: '#f59e0b' },
+    { icon: <FaMemory />, label: 'Total RAM', value: `${info.totalMemoryGB} GB`, color: '#a855f7' },
+    { icon: <FaMemory />, label: 'Free RAM', value: `${info.freeMemoryGB} GB`, sub: `Used: ${(info.totalMemoryGB - info.freeMemoryGB).toFixed(2)} GB`, color: '#06b6d4' },
+    { icon: <FaServer />, label: 'Uptime', value: info.uptime, color: '#ec4899' },
+    { icon: <MdStorage />, label: 'Architecture', value: info.arch, color: '#f59e0b' },
+  ] : [];
+
+  if (loading) return (
+    <div className="flex-1 flex items-center justify-center">
+      <div className="w-16 h-16 rounded-full border-4 border-purple-500/20 border-t-purple-400 animate-spin"></div>
+    </div>
+  );
 
   return (
-    <div className="flex-1 p-8 overflow-auto">
-      {/* Header */}
+    <div className="flex-1 p-8 overflow-auto relative z-10 animate-fade-in">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white">System Info</h1>
-          <p className="text-gray-400 text-sm mt-1">Detailed system information</p>
+          <h1 className="text-3xl font-bold grad-text">System Info</h1>
+          <p className="text-gray-600 text-sm mt-1">Detailed system information</p>
         </div>
-        <button
-          onClick={fetchInfo}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#00ff88]/10 border border-[#00ff88]/30 text-[#00ff88] hover:bg-[#00ff88]/20 transition-all text-sm"
-        >
-          <MdRefresh size={16} />
-          Refresh
+        <button onClick={fetchInfo}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl glass hover:border-purple-500/30 text-gray-400 hover:text-purple-300 transition-all text-sm">
+          <MdRefresh size={16} />Refresh
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <InfoCard
-          icon={<FaServer size={20} />}
-          label="Hostname"
-          value={info?.hostname || 'N/A'}
-          color="#00ff88"
-        />
-        <InfoCard
-          icon={<FaMicrochip size={20} />}
-          label="Platform"
-          value={`${info?.platform} (${info?.arch})`}
-          color="#00d4ff"
-        />
-        <InfoCard
-          icon={<FaCode size={20} />}
-          label="Node.js Version"
-          value={info?.nodeVersion || 'N/A'}
-          color="#7c3aed"
-        />
-        <InfoCard
-          icon={<FaMicrochip size={20} />}
-          label="CPU Cores"
-          value={`${info?.cpuCount} Cores`}
-          color="#f59e0b"
-        />
-        <InfoCard
-          icon={<FaMemory size={20} />}
-          label="Total Memory"
-          value={`${info?.totalMemoryGB} GB`}
-          color="#00ff88"
-        />
-        <InfoCard
-          icon={<FaMemory size={20} />}
-          label="Free Memory"
-          value={`${info?.freeMemoryGB} GB`}
-          color="#00d4ff"
-        />
-        <InfoCard
-          icon={<FaServer size={20} />}
-          label="Uptime"
-          value={info?.uptime || 'N/A'}
-          color="#f59e0b"
-        />
-        <InfoCard
-          icon={<MdStorage size={20} />}
-          label="Architecture"
-          value={info?.arch || 'N/A'}
-          color="#7c3aed"
-        />
+        {cards.map((c, i) => (
+          <div key={i} className="glass rounded-xl p-5 flex items-center gap-4 card-glow group">
+            <div className="p-3 rounded-xl flex-shrink-0 text-xl transition-transform group-hover:scale-110"
+              style={{ background: `${c.color}12`, border: `1px solid ${c.color}25`, color: c.color }}>{c.icon}</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-gray-600 text-xs uppercase tracking-wider">{c.label}</p>
+              <p className="text-white font-bold mt-1 truncate">{c.value}</p>
+              {c.sub && <p className="text-xs mt-1" style={{ color: c.color }}>{c.sub}</p>}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Raw Info Card */}
-      <div className="card-glow rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Raw System Data</h2>
-        <pre className="text-[#00ff88] text-sm font-mono bg-[#0a0e1a] p-4 rounded-xl overflow-auto">
-          {JSON.stringify(info, null, 2)}
-        </pre>
+      <div className="glass rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <MdStorage className="text-purple-400" />
+          <h2 className="text-white font-semibold">Raw Data</h2>
+        </div>
+        <div className="bg-black/40 rounded-xl p-4 border border-white/5">
+          <pre className="text-purple-300/70 text-xs font-mono overflow-auto leading-relaxed">
+            {JSON.stringify(info, null, 2)}
+          </pre>
+        </div>
       </div>
     </div>
   );

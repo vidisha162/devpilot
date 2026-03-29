@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import API from '../utils/api';
 import { MdMonitor, MdRefresh, MdWifi, MdWifiOff } from 'react-icons/md';
 import { FaServer, FaMemory, FaMicrochip } from 'react-icons/fa';
-import { RadialBarChart, RadialBar, ResponsiveContainer, Tooltip } from 'recharts';
+import { RadialBarChart, RadialBar, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 const ServerHealth = () => {
   const [health, setHealth] = useState(null);
@@ -10,22 +10,26 @@ const ServerHealth = () => {
   const [pingHost, setPingHost] = useState('');
   const [pingResult, setPingResult] = useState(null);
   const [pinging, setPinging] = useState(false);
+  const [history, setHistory] = useState([]);
 
   const fetchHealth = async () => {
     try {
       const { data } = await API.get('/server/health');
       setHealth(data);
-    } catch (error) {
-      console.error('Error fetching health:', error);
-    } finally {
-      setLoading(false);
-    }
+      const mem = ((data.usedMemory / data.totalMemory) * 100).toFixed(1);
+      setHistory(prev => [...prev, {
+        time: new Date().toLocaleTimeString(),
+        memory: parseFloat(mem),
+        load: parseFloat((data.loadAverage[0] * 10).toFixed(1))
+      }].slice(-10));
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => {
     fetchHealth();
-    const interval = setInterval(fetchHealth, 5000);
-    return () => clearInterval(interval);
+    const i = setInterval(fetchHealth, 5000);
+    return () => clearInterval(i);
   }, []);
 
   const handlePing = async () => {
@@ -35,183 +39,141 @@ const ServerHealth = () => {
     try {
       const { data } = await API.get(`/server/ping/${pingHost}`);
       setPingResult(data);
-    } catch (error) {
-      setPingResult({ status: 'unreachable', host: pingHost });
-    } finally {
-      setPinging(false);
-    }
+    } catch { setPingResult({ status: 'unreachable', host: pingHost }); }
+    finally { setPinging(false); }
   };
 
-  const formatBytes = (bytes) => (bytes / 1024 / 1024 / 1024).toFixed(2);
-  const formatUptime = (seconds) => {
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${days}d ${hours}h ${minutes}m`;
-  };
-
-  const memPercent = health
-    ? parseFloat(((health.usedMemory / health.totalMemory) * 100).toFixed(1))
-    : 0;
-
+  const memPercent = health ? parseFloat(((health.usedMemory / health.totalMemory) * 100).toFixed(1)) : 0;
   const radialData = [
-    { name: 'Memory', value: memPercent, fill: '#00ff88' },
-    { name: 'Load', value: health ? Math.min(health.loadAverage[0] * 10, 100) : 0, fill: '#00d4ff' },
+    { name: 'Memory', value: memPercent, fill: '#a855f7' },
+    { name: 'Load', value: Math.min((health?.loadAverage[0] || 0) * 10, 100), fill: '#06b6d4' },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-[#00ff88]/20 border-t-[#00ff88] rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex-1 flex items-center justify-center">
+      <div className="w-16 h-16 rounded-full border-4 border-purple-500/20 border-t-purple-400 animate-spin"></div>
+    </div>
+  );
 
   return (
-    <div className="flex-1 p-8 overflow-auto">
-      {/* Header */}
+    <div className="flex-1 p-8 overflow-auto relative z-10 animate-fade-in">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white">Server Health</h1>
-          <p className="text-gray-400 text-sm mt-1">Real-time server monitoring</p>
+          <h1 className="text-3xl font-bold grad-text">Server Health</h1>
+          <p className="text-gray-600 text-sm mt-1">Real-time monitoring</p>
         </div>
-        <button
-          onClick={fetchHealth}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#00ff88]/10 border border-[#00ff88]/30 text-[#00ff88] hover:bg-[#00ff88]/20 transition-all text-sm"
-        >
-          <MdRefresh size={16} />
-          Refresh
+        <button onClick={fetchHealth}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl glass hover:border-purple-500/30 text-gray-400 hover:text-purple-300 transition-all text-sm">
+          <MdRefresh size={16} />Refresh
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Radial Chart */}
-        <div className="card-glow rounded-2xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Resource Usage</h2>
-          <ResponsiveContainer width="100%" height={220}>
-            <RadialBarChart
-              cx="50%"
-              cy="50%"
-              innerRadius="30%"
-              outerRadius="90%"
-              data={radialData}
-            >
-              <RadialBar dataKey="value" cornerRadius={10} background={{ fill: '#1a2332' }} />
-              <Tooltip
-                contentStyle={{ background: '#0d1224', border: '1px solid #00ff88', borderRadius: '8px' }}
-                itemStyle={{ color: '#00ff88' }}
-              />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+        {/* Radial */}
+        <div className="glass rounded-2xl p-6">
+          <h2 className="text-white font-semibold mb-1">Resource Usage</h2>
+          <p className="text-gray-600 text-xs mb-4">Memory & CPU load</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <RadialBarChart cx="50%" cy="50%" innerRadius="30%" outerRadius="90%" data={radialData}>
+              <RadialBar dataKey="value" cornerRadius={8} background={{ fill: 'rgba(255,255,255,0.03)' }} />
+              <Tooltip contentStyle={{ background: '#0d0018', border: '1px solid rgba(168,85,247,0.3)', borderRadius: '12px' }} />
             </RadialBarChart>
           </ResponsiveContainer>
           <div className="flex justify-center gap-6 mt-2">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[#00ff88]"></div>
-              <span className="text-gray-400 text-sm">Memory {memPercent}%</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[#00d4ff]"></div>
-              <span className="text-gray-400 text-sm">Load {health?.loadAverage[0]?.toFixed(2)}</span>
-            </div>
+            {[{ color: '#a855f7', label: `Memory ${memPercent}%` }, { color: '#06b6d4', label: `Load ${health?.loadAverage[0]?.toFixed(2)}` }].map(l => (
+              <div key={l.label} className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: l.color, boxShadow: `0 0 8px ${l.color}` }}></div>
+                <span className="text-gray-500 text-sm">{l.label}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Health Metrics */}
-        <div className="space-y-4">
-          <div className="card-glow rounded-xl p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#00ff88]/10 border border-[#00ff88]/30">
-              <FaMemory className="text-[#00ff88] text-xl" />
-            </div>
-            <div className="flex-1">
-              <p className="text-gray-400 text-sm">Memory</p>
-              <p className="text-white font-bold">{formatBytes(health?.usedMemory)} GB used</p>
-              <div className="mt-2 h-2 bg-gray-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#00ff88] rounded-full transition-all"
-                  style={{ width: `${memPercent}%` }}
-                ></div>
+        {/* Metrics */}
+        <div className="space-y-3">
+          {[
+            { icon: <FaMemory />, label: 'Memory', value: `${(health?.usedMemory / 1024 / 1024 / 1024).toFixed(2)} GB used`, sub: `${(health?.freeMemory / 1024 / 1024 / 1024).toFixed(2)} GB free`, percent: memPercent, color: '#a855f7' },
+            { icon: <FaMicrochip />, label: 'CPU', value: `${health?.cpus} Cores`, sub: `Load: ${health?.loadAverage?.map(l => l.toFixed(2)).join(' | ')}`, color: '#06b6d4' },
+            { icon: <FaServer />, label: 'Uptime', value: `${Math.floor(health?.uptime / 3600)}h ${Math.floor((health?.uptime % 3600) / 60)}m`, sub: `Host: ${health?.hostname}`, color: '#ec4899' },
+            { icon: <MdMonitor />, label: 'Platform', value: health?.platform, sub: `RAM: ${(health?.totalMemory / 1024 / 1024 / 1024).toFixed(1)} GB total`, color: '#f59e0b' },
+          ].map((m, i) => (
+            <div key={i} className="glass rounded-xl p-4 flex items-center gap-4">
+              <div className="p-2.5 rounded-xl flex-shrink-0 text-lg" style={{ background: `${m.color}15`, border: `1px solid ${m.color}25`, color: m.color }}>{m.icon}</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-600 text-xs">{m.label}</p>
+                <p className="text-white font-semibold text-sm">{m.value}</p>
+                {m.percent !== undefined && (
+                  <div className="mt-1.5 h-1 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-700"
+                      style={{ width: `${m.percent}%`, background: `linear-gradient(90deg, ${m.color}, #06b6d4)`, boxShadow: `0 0 8px ${m.color}` }}></div>
+                  </div>
+                )}
+                <p className="text-gray-700 text-xs mt-1">{m.sub}</p>
               </div>
             </div>
-            <span className="text-[#00ff88] font-bold">{memPercent}%</span>
-          </div>
-
-          <div className="card-glow rounded-xl p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#00d4ff]/10 border border-[#00d4ff]/30">
-              <FaMicrochip className="text-[#00d4ff] text-xl" />
-            </div>
-            <div className="flex-1">
-              <p className="text-gray-400 text-sm">CPU Cores</p>
-              <p className="text-white font-bold">{health?.cpus} Cores</p>
-              <p className="text-gray-500 text-xs mt-1">Load avg: {health?.loadAverage?.map(l => l.toFixed(2)).join(' | ')}</p>
-            </div>
-          </div>
-
-          <div className="card-glow rounded-xl p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#f59e0b]/10 border border-[#f59e0b]/30">
-              <FaServer className="text-[#f59e0b] text-xl" />
-            </div>
-            <div className="flex-1">
-              <p className="text-gray-400 text-sm">Uptime</p>
-              <p className="text-white font-bold">{formatUptime(health?.uptime)}</p>
-              <p className="text-gray-500 text-xs mt-1">Host: {health?.hostname}</p>
-            </div>
-          </div>
-
-          <div className="card-glow rounded-xl p-4 flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#7c3aed]/10 border border-[#7c3aed]/30">
-              <MdMonitor className="text-[#7c3aed] text-xl" />
-            </div>
-            <div className="flex-1">
-              <p className="text-gray-400 text-sm">Platform</p>
-              <p className="text-white font-bold">{health?.platform}</p>
-              <p className="text-gray-500 text-xs mt-1">Free: {formatBytes(health?.freeMemory)} GB</p>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Ping Tool */}
-      <div className="card-glow rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <MdWifi className="text-[#00ff88]" />
-          Ping Tool
+      {/* History Chart */}
+      <div className="glass rounded-2xl p-6 mb-5">
+        <h2 className="text-white font-semibold mb-1">History</h2>
+        <p className="text-gray-600 text-xs mb-4">Memory & load over time</p>
+        <ResponsiveContainer width="100%" height={150}>
+          <AreaChart data={history}>
+            <defs>
+              <linearGradient id="mG" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="lG" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+            <XAxis dataKey="time" stroke="#374151" tick={{ fontSize: 9, fill: '#4b5563' }} />
+            <YAxis stroke="#374151" tick={{ fontSize: 9, fill: '#4b5563' }} />
+            <Tooltip contentStyle={{ background: '#0d0018', border: '1px solid rgba(168,85,247,0.3)', borderRadius: '12px' }} />
+            <Area type="monotone" dataKey="memory" stroke="#a855f7" fill="url(#mG)" strokeWidth={2} dot={false} name="Memory %" />
+            <Area type="monotone" dataKey="load" stroke="#06b6d4" fill="url(#lG)" strokeWidth={2} dot={false} name="Load" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Ping */}
+      <div className="glass rounded-2xl p-6">
+        <h2 className="text-white font-semibold mb-1 flex items-center gap-2">
+          <MdWifi className="text-purple-400" />Ping Tool
         </h2>
+        <p className="text-gray-600 text-xs mb-4">Test server connectivity</p>
         <div className="flex gap-3 mb-4">
-          <input
-            type="text"
-            value={pingHost}
-            onChange={(e) => setPingHost(e.target.value)}
-            placeholder="Enter host (e.g. google.com)"
-            className="flex-1 bg-[#0a0e1a] border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#00ff88] transition-all"
-            onKeyPress={(e) => e.key === 'Enter' && handlePing()}
-          />
-          <button
-            onClick={handlePing}
-            disabled={pinging || !pingHost}
-            className="px-6 py-3 rounded-xl bg-[#00ff88] text-[#0a0e1a] font-bold hover:bg-[#00ff88]/90 transition-all disabled:opacity-50"
-          >
-            {pinging ? 'Pinging...' : 'Ping'}
+          <input type="text" value={pingHost} onChange={e => setPingHost(e.target.value)}
+            placeholder="Enter hostname (e.g. google.com)"
+            className="flex-1 bg-white/3 border border-white/8 rounded-xl px-4 py-3 text-white placeholder-gray-700 focus:outline-none focus:border-purple-500/40 transition-all"
+            onKeyPress={e => e.key === 'Enter' && handlePing()} />
+          <button onClick={handlePing} disabled={pinging || !pingHost}
+            className="px-8 py-3 rounded-xl btn-grad text-white font-bold transition-all disabled:opacity-50">
+            {pinging ? (
+              <span className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Pinging...
+              </span>
+            ) : 'Ping →'}
           </button>
         </div>
-
         {pingResult && (
-          <div className={`p-4 rounded-xl border ${
-            pingResult.status === 'reachable'
-              ? 'bg-[#00ff88]/10 border-[#00ff88]/30'
-              : 'bg-red-500/10 border-red-500/30'
+          <div className={`p-4 rounded-xl border animate-fade-in ${
+            pingResult.status === 'reachable' ? 'bg-purple-500/10 border-purple-500/20' : 'bg-red-500/10 border-red-500/20'
           }`}>
             <div className="flex items-center gap-2 mb-2">
-              {pingResult.status === 'reachable'
-                ? <MdWifi className="text-[#00ff88] text-xl" />
-                : <MdWifiOff className="text-red-400 text-xl" />
-              }
-              <span className={`font-bold ${pingResult.status === 'reachable' ? 'text-[#00ff88]' : 'text-red-400'}`}>
+              {pingResult.status === 'reachable' ? <MdWifi className="text-purple-400" /> : <MdWifiOff className="text-red-400" />}
+              <span className={`font-bold ${pingResult.status === 'reachable' ? 'text-purple-400' : 'text-red-400'}`}>
                 {pingHost} is {pingResult.status}
               </span>
             </div>
             {pingResult.output && (
-              <pre className="text-gray-400 text-xs font-mono mt-2 overflow-auto max-h-32">
-                {pingResult.output}
-              </pre>
+              <pre className="text-gray-500 text-xs font-mono mt-2 bg-black/30 p-3 rounded-lg overflow-auto max-h-32">{pingResult.output}</pre>
             )}
           </div>
         )}
