@@ -2,7 +2,7 @@ const express  = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
-
+const k8sRoutes = require('./routes/k8sRoutes');
 dotenv.config();
 const authRoutes = require('./routes/authRoutes');
 const dockerRoutes = require('./routes/dockerRoutes');
@@ -20,6 +20,7 @@ app.use('/api/auth',authRoutes);
 app.use('/api/docker',dockerRoutes);
 app.use('/api/server',serverRoutes);
 
+app.use('/api/k8s',k8sRoutes);
 
 app.use((err,next,req,res)=>{
     console.log(err.stack);
