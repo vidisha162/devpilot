@@ -10,6 +10,8 @@ import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import API from './utils/api';
 
+import Kubernetes from './pages/Kubernetes';
+import Deploy from './pages/Deploy';
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return (
@@ -92,6 +94,12 @@ function App() {
           } />
           <Route path="/system" element={
             <PrivateRoute><Layout><SystemInfo /></Layout></PrivateRoute>
+          } />
+          <Route path="/kubernetes" element={
+           <PrivateRoute><Layout><Kubernetes /></Layout></PrivateRoute>
+          } />
+          <Route path="/deploy" element={
+           <PrivateRoute><Layout><Deploy /></Layout></PrivateRoute>
           } />
         </Routes>
       </BrowserRouter>

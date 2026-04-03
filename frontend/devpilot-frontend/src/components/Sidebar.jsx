@@ -1,7 +1,9 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { MdDashboard, MdMonitor, MdStorage, MdLogout } from 'react-icons/md';
+import { SiKubernetes } from 'react-icons/si';
 import { FaDocker, FaRocket } from 'react-icons/fa';
+
 
 const Sidebar = () => {
   const { user, logout } = useNavigate ? useAuth() : { user: null, logout: () => {} };
@@ -12,6 +14,8 @@ const Sidebar = () => {
   const navItems = [
     { path: '/dashboard', icon: <MdDashboard size={18} />, label: 'Dashboard' },
     { path: '/containers', icon: <FaDocker size={18} />, label: 'Containers' },
+    { path: '/kubernetes', icon: <SiKubernetes size={18} />, label: 'Kubernetes' },
+    { path: '/deploy', icon: <FaRocket size={18} />, label: 'Deploy' },
     { path: '/server', icon: <MdMonitor size={18} />, label: 'Server Health' },
     { path: '/system', icon: <MdStorage size={18} />, label: 'System Info' },
   ];
